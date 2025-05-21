@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [ $# -eq 0 ] || [[ "$1" == "--help" ]]; then
+  echo -e "🔍 Request a Copilot code review on a GitHub pull request"
+  echo -e ""
+  echo -e "\033[1mUSAGE\033[0m"
+  echo -e "  gh copilot-review [<number> | <url>]"
+  echo -e ""
+  echo -e "\033[1mINHERITED FLAGS\033[0m"
+  echo -e "  --help   Show help for command"
+  echo -e ""
+  echo -e "\033[1mARGUMENTS\033[0m"
+  echo -e "  A pull request can be supplied as argument in any of the following formats:"
+  echo -e "  - by number, e.g. \"123\";"
+  echo -e "  - by URL, e.g. \"https://github.com/OWNER/REPO/pull/123\"."
+  echo -e ""
+  echo -e "\033[1mEXAMPLES\033[0m"
+  echo -e "  $ gh-copilot-review 353"
+  echo -e "  $ gh-copilot-review https://github.com/OWNER/REPO/pull/353"
+  echo -e ""
+  echo -e "\033[1mLEARN MORE\033[0m"
+  echo -e "  Use \`gh copilot-review --help\` for more information about this command."
+  echo -e "  Read the manual at https://github.com/ChrisCarini/gh-copilot-review"
+  exit 0
+fi
+
+input="$1"
+
+# Check if input is just a PR number (all digits)
+if [[ "$input" =~ ^[0-9]+$ ]]; then
+  pr_number="$input"
+  # Try to get repo info from git
+  git_url=$(git remote get-url origin)
+  if [[ "$git_url" =~ github.com[:/](.+/.+?)(\.git)?$ ]]; then
+    repo="${BASH_REMATCH[1]}"
+  else
+    echo "❌ Error: Could not determine GitHub repo from git remote."
+    exit 1
+  fi
+elif [[ "$input" =~ github\.com/([^/]+/[^/]+)/pull/([0-9]+) ]]; then
+  repo="${BASH_REMATCH[1]}"
+  pr_number="${BASH_REMATCH[2]}"
+else
+  echo "❌ Error: Invalid input. Provide a GitHub PR URL or PR number."
+  exit 1
+fi
+
+echo "🔍 Requesting Copilot Code Review on ${repo} PR #${pr_number}..."
+
+# Make the API call
+if gh api --method POST "/repos/${repo}/pulls/${pr_number}/requested_reviewers" \
+  -f "reviewers[]=copilot-pull-request-reviewer[bot]" >/dev/null 2>&1; then
+  echo "✅ Success: Requested Copilot Code Review on https://github.com/${repo}/pull/${pr_number}"
+else
+  echo "❌ Failure: Could not request Copilot Code Review on https://github.com/${repo}/pull/${pr_number}"
+fi
