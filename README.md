@@ -36,6 +36,49 @@ gh copilot-review 353
 gh copilot-review https://github.com/OWNER/REPO/pull/353
 ```
 
+### 🤖 Automatically request a Copilot code review on PRs
+
+> [!NOTE]
+> GitHub has native functionality to [enable automatic Copilot reviews](https://docs.github.com/en/copilot/using-github-copilot/code-review/using-copilot-code-review#enabling-automatic-reviews). **It's advised to use that, if able.**
+>
+> The below workflow is better suited for cases where more complex logic is desired.
+
+Use the below workflow to automatically request a Copilot review on pull requests that match certain criteria.
+
+```yaml
+name: Automatic Copilot Code Review
+
+on:
+  pull_request:
+    types:
+      - opened           # brand-new PRs
+      - ready_for_review # drafts marked “Ready for review”
+      - reopened         # PRs that were closed then reopened
+
+jobs:
+  add-copilot-to-pr-reviews:
+    name: "Add Copilot to PR reviews"
+    if: ${{ github.event.pull_request.draft == false }}   # skip still-draft PRs
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN_COPILOT_REVIEW }}   # gh CLI picks this up automatically
+
+    steps:
+      - name: Install gh-copilot-review extension
+        run: gh extension install ChrisCarini/gh-copilot-review
+
+      - name: Ask Copilot to review this PR
+        run: gh copilot-review "${{ github.event.pull_request.html_url }}"
+```
+
+#### Token Permissions
+
+You need to create a [GitHub fine-grained personal access token (PAT)](https://github.com/settings/personal-access-tokens/new) with the following permission:
+
+- `Pull requests: Read and write`
+
+Then, add it as a secret to your repository. In the above example, the secret is named `GH_TOKEN_COPILOT_REVIEW`.
+
 ## ⭐ Inspiration
 
 This project was inspired by:
