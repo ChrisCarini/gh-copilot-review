@@ -55,4 +55,5 @@ if gh api --method POST "/repos/${repo}/pulls/${pr_number}/requested_reviewers" 
   echo "✅ Success: Requested Copilot Code Review on https://github.com/${repo}/pull/${pr_number}"
 else
   echo "❌ Failure: Could not request Copilot Code Review on https://github.com/${repo}/pull/${pr_number}"
+  exit 1
 fi
