@@ -28,24 +28,60 @@ fi
 
 input="$1"
 
-# Check if input is just a PR number (all digits)
-if [[ "$input" =~ ^[0-9]+$ ]]; then
-  pr_number="$input"
-  # Try to get repo info from git
-  git_url=$(git remote get-url origin)
-  if [[ "$git_url" =~ github.com[:/](.+/.+?)(\.git)?$ ]]; then
-    repo="${BASH_REMATCH[1]}"
-  else
-    echo "❌ Error: Could not determine GitHub repo from git remote."
+# Function to extract repo from git remote
+get_repo_from_git() {
+  git_url=$(git remote get-url origin 2>/dev/null)
+  if [ -z "$git_url" ]; then
+    echo "❌ Error: Could not get git remote URL. Are you in a git repo?" >&2
     exit 1
   fi
-elif [[ "$input" =~ github\.com/([^/]+/[^/]+)/pull/([0-9]+) ]]; then
-  repo="${BASH_REMATCH[1]}"
-  pr_number="${BASH_REMATCH[2]}"
-else
-  echo "❌ Error: Invalid input. Provide a GitHub PR URL or PR number."
-  exit 1
-fi
+
+  case "$git_url" in
+    git@github.com:*)
+      echo "$git_url" | sed -e 's|git@github.com:||' -e 's|\.git$||'
+      ;;
+    https://github.com/*)
+      echo "$git_url" | sed -e 's|https://github.com/||' -e 's|\.git$||'
+      ;;
+    ssh://*@github.com/*)
+      echo "$git_url" | sed -e 's|.*@github.com/||' -e 's|\.git$||'
+      ;;
+    *)
+      echo "❌ Error: Unsupported git remote format: $git_url" >&2
+      exit 1
+      ;;
+  esac
+}
+
+case "$input" in
+  ''|*[^0-9]*)
+    # Assume it's a URL
+    case "$input" in
+      *github.com/*/pull/*)
+        repo=$(printf '%s\n' "$input" | sed -E 's|.*github.com/([^/]+/[^/]+)/pull/[0-9]+.*|\1|')
+        pr_number=$(printf '%s\n' "$input" | sed -E 's|.*/pull/([0-9]+).*|\1|')
+
+        if [ -z "$repo" ] || [ -z "$pr_number" ]; then
+          echo "❌ Error: Could not extract repo or PR number from URL."
+          exit 1
+        fi
+        ;;
+      *)
+        echo "❌ Error: Invalid input. Provide a GitHub PR URL or PR number."
+        exit 1
+        ;;
+    esac
+    ;;
+  *)
+    # All digits → PR number, get repo from git
+    pr_number="$input"
+    repo=$(get_repo_from_git)
+    if [ -z "$repo" ]; then
+      echo "❌ Error: Could not determine repo from git remote."
+      exit 1
+    fi
+    ;;
+esac
 
 echo "🔍 Requesting Copilot Code Review on ${repo} PR #${pr_number}..."
 
