@@ -73,11 +73,13 @@ jobs:
 
 #### Token Permissions
 
-You need to create a [GitHub fine-grained personal access token (PAT)](https://github.com/settings/personal-access-tokens/new) with the following permission:
+You need to create a [GitHub fine-grained personal access token (PAT)](https://github.com/settings/personal-access-tokens/new?name=GH_TOKEN_COPILOT_REVIEW&description=For+Automatic+Copilot+Code+Reviews&expires_in=365&pull_requests=write) with the following permission:
 
 - `Pull requests: Read and write`
 
 Then, add it as a secret to your repository. In the above example, the secret is named `GH_TOKEN_COPILOT_REVIEW`.
+
+**Note:** As of 2025-09, the above link will deep-link you to the fine-grained PAT page with the correct permissions selected. _(Thanks to [@cole-hartman](https://github.com/cole-hartman) and [@dorisbwang](https://github.com/dorisbwang) work adding [Template URLs for fine-grained PATs](https://github.blog/changelog/2025-08-26-template-urls-for-fine-grained-pats-and-updated-permissions-ui/))_
 
 ## ⭐ Inspiration
 
