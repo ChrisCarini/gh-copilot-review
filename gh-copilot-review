@@ -94,7 +94,12 @@ if [ $status -eq 0 ]; then
   echo "✅ Success: Requested Copilot Code Review on https://github.com/${repo}/pull/${pr_number}"
 else
   echo "❌ Failure: Could not request Copilot Code Review on https://github.com/${repo}/pull/${pr_number}"
-  echo "Debug Info:"
-  echo "$response"
+
+  # Only show debug info if DEBUG_COPILOT_REVIEW is set
+  if [ "${DEBUG_COPILOT_REVIEW:-}" = "true" ]; then
+    echo "🔍 Debug Info:"
+    echo "$response" | jq . || echo "$response"
+  fi
+
   exit $status
 fi
