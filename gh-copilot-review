@@ -85,18 +85,23 @@ esac
 
 # Make the API call
 echo "🔍 Requesting Copilot Code Review on ${repo} PR #${pr_number}..."
+set +e
 response=$(gh api --method POST "/repos/${repo}/pulls/${pr_number}/requested_reviewers" \
   -f "reviewers[]=copilot-pull-request-reviewer[bot]" 2>&1)
 status=$?
+set -e
 
 # Validate response
 if [ $status -eq 0 ]; then
   echo "✅ Success: Requested Copilot Code Review on https://github.com/${repo}/pull/${pr_number}"
 else
   echo "❌ Failure: Could not request Copilot Code Review on https://github.com/${repo}/pull/${pr_number}"
-
-  # Only show debug info if DEBUG_COPILOT_REVIEW is set
-  if [ "${DEBUG_COPILOT_REVIEW:-}" = "true" ]; then
+  # Only show debug info if any of the below are set
+  #   - `DEBUG_COPILOT_REVIEW=true`
+  #   - `ACTIONS_STEP_DEBUG=true`
+  #   - `ACTIONS_RUNNER_DEBUG=true`
+  #   - `RUNNER_DEBUG=1` (set when a user checks the `Enable debug logging` checkbox when re-running a job)
+  if [ "${DEBUG_COPILOT_REVIEW:-}" = "true" ] || [ "${ACTIONS_STEP_DEBUG:-}" = "true" ] || [ "${ACTIONS_RUNNER_DEBUG:-}" = "true" ] || [ "${RUNNER_DEBUG:-}" = "1" ]; then
     echo "🔍 Debug Info:"
     echo "$response" | jq . || echo "$response"
   fi
