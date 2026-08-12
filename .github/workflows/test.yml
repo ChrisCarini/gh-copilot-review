@@ -1,0 +1,30 @@
+name: Test extension
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.shell }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shell:
+          - bash
+          - zsh
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run scenarios
+        env:
+          SHELL_UNDER_TEST: ${{ matrix.shell }}
+        run: ./tests/test-scenarios.sh "$SHELL_UNDER_TEST"
