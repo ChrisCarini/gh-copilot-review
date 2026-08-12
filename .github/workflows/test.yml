@@ -29,6 +29,63 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes zsh
 
       - name: Run scenarios
+        id: scenarios
         env:
           SHELL_UNDER_TEST: ${{ matrix.shell }}
-        run: ./tests/test-scenarios.sh "$SHELL_UNDER_TEST"
+        run: |
+          set -o pipefail
+          ./tests/test-scenarios.sh "$SHELL_UNDER_TEST" 2>&1 |
+            tee "$RUNNER_TEMP/scenario-results.log"
+
+      - name: Write job summary
+        if: always()
+        env:
+          SHELL_UNDER_TEST: ${{ matrix.shell }}
+          SCENARIO_OUTCOME: ${{ steps.scenarios.outcome }}
+          JOB_LOGS_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [[ "$SCENARIO_OUTCOME" == "success" ]]; then
+            overall_result="✅ Passed"
+          else
+            overall_result="❌ Failed"
+          fi
+
+          if command -v "$SHELL_UNDER_TEST" >/dev/null 2>&1; then
+            shell_version=$("$SHELL_UNDER_TEST" --version 2>&1 | head -n 1)
+          else
+            shell_version="Unavailable"
+          fi
+
+          scenarios=(
+            "URL outside a git repository"
+            "number outside a git repository"
+            "URL inside a git repository with a different origin"
+            "number inside a git repository with an SSH origin"
+          )
+          results_file="$RUNNER_TEMP/scenario-results.log"
+
+          {
+            printf '## Test results (%s)\n\n' "$SHELL_UNDER_TEST"
+            printf '**Result:** %s\n\n' "$overall_result"
+            printf '**Shell:** `%s`\n\n' "$SHELL_UNDER_TEST"
+            printf '**Version:** `%s`\n\n' "$shell_version"
+            printf '### Scenarios\n\n'
+            printf '| Scenario | Result |\n'
+            printf '| --- | --- |\n'
+
+            for scenario in "${scenarios[@]}"; do
+              if [[ -f "$results_file" ]] &&
+                grep -Fqx "PASS [$SHELL_UNDER_TEST] $scenario" "$results_file"; then
+                scenario_result="✅ Passed"
+              elif [[ -f "$results_file" ]] &&
+                grep -Fq "FAIL [$SHELL_UNDER_TEST] $scenario:" "$results_file"; then
+                scenario_result="❌ Failed"
+              else
+                scenario_result="⏭️ Not run"
+              fi
+
+              printf '| %s | %s |\n' "$scenario" "$scenario_result"
+            done
+
+            printf '\n[View job logs](%s)\n' "$JOB_LOGS_URL"
+          } >>"$GITHUB_STEP_SUMMARY"
