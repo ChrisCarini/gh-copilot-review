@@ -24,6 +24,10 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Install zsh
+        if: matrix.shell == 'zsh'
+        run: sudo apt-get update && sudo apt-get install --yes zsh
+
       - name: Run scenarios
         env:
           SHELL_UNDER_TEST: ${{ matrix.shell }}
